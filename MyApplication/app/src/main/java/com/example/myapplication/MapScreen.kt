@@ -1,70 +1,83 @@
 package com.example.myapplication
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.example.myapplication.R
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import com.google.android.gms.maps.model.CameraPosition
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import androidx.core.content.ContextCompat
-import androidx.compose.ui.graphics.asImageBitmap
 
 @Composable
 fun MapScreen() {
-    val arequipaLocation = LatLng(-16.4090474, -71.537451)
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(arequipaLocation, 12f)
-    }
-
     val context = LocalContext.current
 
+    // 📍 Lista de ubicaciones
+    val locations = listOf(
+        LatLng(-16.433415, -71.5442652), // JLByR
+        LatLng(-16.4205151, -71.4945209), // Paucarpata
+        LatLng(-16.3524187, -71.5675994)  // Zamacola
+    )
+
+    // 🧭 Cámara inicial centrada en Arequipa
+    val arequipaCenter = LatLng(-16.4090474, -71.537451)
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(arequipaCenter, 11f)
+    }
+
+    // 🎥 Control programático de la cámara (mover hacia Yura)
+    LaunchedEffect(Unit) {
+        // Esperar un momento para que el mapa se inicialice
+        kotlinx.coroutines.delay(1500)
+
+        // Mover con animación a Yura
+        cameraPositionState.animate(
+            update = CameraUpdateFactory.newLatLngZoom(
+                LatLng(-16.2520984, -71.6836503), // Yura
+                12f
+            ),
+            durationMs = 3000 // 3 segundos de animación
+        )
+    }
+
+    // 🗺️ Mostrar el mapa
     GoogleMap(
         modifier = Modifier.fillMaxSize(),
         cameraPositionState = cameraPositionState
     ) {
-        // 🔵 Ejemplo 1: marcador azul estándar
-        Marker(
-            state = MarkerState(position = arequipaLocation),
-            title = "Arequipa, Perú",
-            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)
-        )
+        // 🔁 Colocar marcadores con ícono “gorro”
+        locations.forEachIndexed { index, location ->
+            val title = when (index) {
+                0 -> "José Luis Bustamante y Rivero"
+                1 -> "Paucarpata"
+                else -> "Zamacola"
+            }
 
-        // 🟢 Ejemplo 2: marcador con ícono personalizado desde drawable
-        Marker(
-            state = MarkerState(position = arequipaLocation),
-            title = "Arequipa con ícono personalizado",
-            icon = bitmapDescriptorFromVector(context, R.drawable.lobo)
-        )
+            Marker(
+                state = MarkerState(position = location),
+                title = title,
+                snippet = "Punto de interés",
+                icon = bitmapFromDrawable(context, R.drawable.gorro, 96, 96)
+            )
+        }
     }
 }
 
-/**
- * Convierte un recurso drawable en un BitmapDescriptor para usarlo como icono en un marcador.
- */
-fun bitmapDescriptorFromVector(context: Context, vectorResId: Int): BitmapDescriptor {
-    val vectorDrawable = ContextCompat.getDrawable(context, vectorResId)
-    vectorDrawable!!.setBounds(
-        0,
-        0,
-        vectorDrawable.intrinsicWidth,
-        vectorDrawable.intrinsicHeight
-    )
-    val bitmap = Bitmap.createBitmap(
-        vectorDrawable.intrinsicWidth,
-        vectorDrawable.intrinsicHeight,
-        Bitmap.Config.ARGB_8888
-    )
-    val canvas = Canvas(bitmap)
-    vectorDrawable.draw(canvas)
-    return BitmapDescriptorFactory.fromBitmap(bitmap)
+// 🧢 Función auxiliar para convertir tu drawable en un ícono redimensionado
+fun bitmapFromDrawable(context: Context, resId: Int, width: Int, height: Int): BitmapDescriptor {
+    val bitmap = BitmapFactory.decodeResource(context.resources, resId)
+    val resizedBitmap = Bitmap.createScaledBitmap(bitmap, width, height, false)
+    return BitmapDescriptorFactory.fromBitmap(resizedBitmap)
 }
+
+
